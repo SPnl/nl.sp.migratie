@@ -160,7 +160,8 @@ class Contributions extends baseclass {
 
 	private function doSpanning($record, $financialType) {
 
-		$q = 'SELECT * FROM spanning WHERE `COL 2` = "' . (int)$record->contact_id . '" AND `COL 8` = "' . $record->join_date . '"';
+		$join_date = date('d-m-Y H:i:s', strtotime($record->join_date));
+		$q = 'SELECT * FROM spanning WHERE `COL 2` = "' . (int)$record->contact_id . '" AND `COL 8` = "' . $join_date . '"';
 
 		$lidm = $this->dbAdapter->query($q);
 
@@ -170,6 +171,9 @@ class Contributions extends baseclass {
 			$betwijze_code = 9;
 			$bedrag        = ceil($rlidm['COL 10'] / 4);
 
+			if($bedrag == 0)
+				$bedrag = 7;
+
 			$this->createContribution($record->id, $record->contact_id, $betwijze_code, $bedrag, $financialType, 'spanning');
 
 		} else {
@@ -178,7 +182,9 @@ class Contributions extends baseclass {
 	}
 
 	private function doDonateurs($record, $financialType) {
-		$q = 'SELECT * FROM toezeggingen WHERE `COL 2` = "' . (int)$record->contact_id . '" AND `COL 4` = "' . $record->join_date . '"';
+
+		$join_date = date('d-m-Y H:i:s', strtotime($record->join_date));
+		$q = 'SELECT * FROM toezeggingen WHERE `COL 2` = "' . (int)$record->contact_id . '" AND (`COL 4` = "' . $join_date . '" OR `COL 4` = "01-01-1980 00:00:00")';
 
 		$lidm = $this->dbAdapter->query($q);
 
@@ -187,6 +193,10 @@ class Contributions extends baseclass {
 			$rlidm = $lidm->fetch_assoc();
 
 			$bedrag = $rlidm['COL 3'];
+			if((float)$bedrag <= 0) {
+				echo "X Bedrag is kleiner dan 0 voor toezegging {$record->id} / lid {$record->contact_id}, skipping.\n";
+				return false;
+			}
 
 			switch ($rlidm['COL 7']) {
 				case 'IN':
