@@ -10,8 +10,8 @@ class spanning extends baseclass {
 		$_mode = explode("=", $arguments[2]);
 		$this->pointer = explode("=", $arguments[1]);
 		$this->fetchLidmaatschapType();
-		if($_mode[1] == "betaald") $this->spanningBetaald();
-		//if($_mode[1] == "gratis") $this->spanningGratis();
+		//if($_mode[1] == "betaald") $this->spanningBetaald();
+		if($_mode[1] == "gratis") $this->spanningGratis();
 		echo "Stop module: SPanning \r\n";
 	}
 
@@ -84,15 +84,17 @@ class spanning extends baseclass {
 	public function spanningGratis() {
 	    echo "\r\n=> Start SPanning-gratis \r\n";
 	    $this->resultSet = $this->dbAdapter->query("
-			SELECT * FROM `his001` 
+			SELECT `his001`.*, `contacten`.`COL_13` FROM `his001` 
+			LEFT JOIN `contacten` ON `his001`.`COL 1` = `contacten`.`COL_1` 
 			WHERE `COL 3` = '2099-01-01' 
-			AND `COL 7` IN ('B','OS','PM','V','AM','TK','EK','S','GS','EP','WH','YR','GL','OR','OD','VV','WN','RB','H','P_B','P_R','P_DH','VT','JV','OPV') 
+			AND `COL 7` IN ('B','OS','V','AM','TK','EK','S','GS','EP','WH','YR','GL','OR','OD','VV','WN','RB','H','P_B','P_DH','P_R','VT','JV','OPV')
+			AND `COL_13` = 0 
 			GROUP BY `COL 1`
 			LIMIT ".$this->pointer[1].", 500
 		");
         while ($this->lms = $this->resultSet->fetch_assoc()) {
-            $startDatum = ($this->lms['COL 2'] != "-  -") ? $this->lms['COL 2'] : NULL;
-            $eindDatum = ($this->lms['COL 3'] != "-  -") ? $this->lms['COL 3'] : NULL;
+            $startDatum = ($this->lms['COL 2'] != "2099-01-01") ? $this->lms['COL 2'] : NULL;
+            $eindDatum = ($this->lms['COL 3'] != "2099-01-01") ? $this->lms['COL 3'] : NULL;
             $this->lmsParams = array(
                 'membership_contact_id' => $this->lms['COL 1'],
                 'join_date'             => $startDatum,
@@ -100,7 +102,6 @@ class spanning extends baseclass {
                 'membership_type_id'    => $this->mst->gratis['id'],
 				'source'				=> "Kaderfunctie: ".$this->lms['COL 7']
             );
-			/* EIND DATUM VOOR DECEMBER Q4-2014 */
 			$kwartaalDatum = new DateTime('last day of december');
 			$this->lmsParams['membership_end_date'] = $kwartaalDatum->format('Y-m-d');
             if(!$this->CIVIAPI->Membership->Create($this->lmsParams)) {
